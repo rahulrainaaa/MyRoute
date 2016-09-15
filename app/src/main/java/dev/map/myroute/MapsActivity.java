@@ -3,6 +3,7 @@ package dev.map.myroute;
 import android.*;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -18,34 +19,43 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener, LocationListener {
 
     //Map and Location objects
     private GoogleMap mMap;
-    LocationManager locationManager = null;
-    Polyline line = null;
+    private LocationManager locationManager = null;
+    private Polyline line = null;
 
     //Map point markers
-    Marker markerStart = null;
-    Marker markerEnd = null;
+    private Marker markerStart = null;
+    private Marker markerEnd = null;
 
     //LatLng points
-    LatLng locStart = null;
-    LatLng locEnd = null;
+    private LatLng locStart = null;
+    private LatLng locEnd = null;
+    private ArrayList<LatLng> listPoints = null;
 
+    //flags
+    private boolean flagFirst = true;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState)
+    {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
     }
 
@@ -67,6 +77,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //Reset all data and flags
         locStart = null;
         locEnd = null;
+        listPoints = new ArrayList<LatLng>();
 
         //Initialize location listener
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
@@ -95,6 +106,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             locationManager.removeUpdates(this);
         }
         locationManager = null;
+        if(listPoints != null)
+        {
+            listPoints.clear();
+            listPoints = null;
+        }
         super.onPause();
     }
 
@@ -102,21 +118,38 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap)
     {
         mMap = googleMap;
-        mMap = googleMap;
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setCompassEnabled(true);
         mMap.getUiSettings().setAllGesturesEnabled(true);
         mMap.setOnMarkerClickListener(this);
-
-        // Add a marker in Sydney and move the camera
-        LatLng sydney = new LatLng(-34, 151);
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
     }
 
     @Override
-    public void onLocationChanged(Location location) {
-
+    public void onLocationChanged(Location location)
+    {
+        //Get location and update map pin
+        double latitude = location.getLatitude();
+        double longitude = location.getLongitude();
+        locEnd = new LatLng(latitude, longitude);
+        //Check if refreshed first time.
+        if(flagFirst)
+        {
+            listPoints.add(new LatLng(latitude, longitude));
+            locStart = new LatLng(latitude, longitude);
+            markerStart = mMap.addMarker(new MarkerOptions().position(locStart).title("Start").icon(BitmapDescriptorFactory.fromResource(R.drawable.ba)));
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(locStart));
+            mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
+            flagFirst = false;
+            markerEnd = mMap.addMarker(new MarkerOptions().position(locEnd).title("End").icon(BitmapDescriptorFactory.fromResource(R.drawable.bb)));
+        }
+        else
+        {
+            listPoints.add(new LatLng(latitude, longitude));
+            markerEnd.setPosition(locEnd);
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(locEnd));
+            mMap.animateCamera(CameraUpdateFactory.zoomTo(10));
+            drawRoute();
+        }
     }
 
     @Override
@@ -139,11 +172,39 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return false;
     }
 
+    private void drawRoute()
+    {
+        //Get all points and plot the polyLine route.
+
+        PolylineOptions options = new PolylineOptions().width(5).color(Color.BLUE).geodesic(true);
+        Iterator<LatLng> iterator = listPoints.iterator();
+        while(iterator.hasNext())
+        {
+            LatLng data = iterator.next();
+            options.add(data);
+        }
+
+        //If line not null then remove old polyline routing.
+        if(line != null)
+        {
+            line.remove();
+        }
+        line = mMap.addPolyline(options);
+
+        //Focus on map bounds
+//        mMap.moveCamera(CameraUpdateFactory.newLatLng(list.get(0).getLatLgnBounds().getCenter()));
+//        LatLngBounds.Builder builder = new LatLngBounds().Builder();
+//        builder.include(locStart);
+//        builder.include(locEnd);
+//        LatLngBounds bounds = builder.build();
+//        mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 50));
+    }
+
     /**
      * @method startInstalledAppDetailsActivity
      * @desc: launches the permission/setting intent UI for this app to assist for enabling permissions.
      */
-    public void startInstalledAppDetailsActivity()
+    private void startInstalledAppDetailsActivity()
     {
         final Intent i = new Intent();
         i.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
