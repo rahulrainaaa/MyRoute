@@ -34,6 +34,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Marker markerStart = null;
     Marker markerEnd = null;
 
+    //LatLng points
+    LatLng locStart = null;
+    LatLng locEnd = null;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,10 +65,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         //Reset all data and flags
-        LatLng locStart = null;
-        LatLng locEnd = null;
-        boolean firstSearch = true;
-        boolean firstRefresh = true;
+        locStart = null;
+        locEnd = null;
 
         //Initialize location listener
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
