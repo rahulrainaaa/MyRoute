@@ -97,6 +97,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if(flagRec)
         {
             //reset flags and start recording
+            recSwitch.setText("Recording");
             mMap.clear();
             if(listPoints != null)
             {
@@ -110,6 +111,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         else
         {
+            recSwitch.setText("Record");
             //stop recording, save route and reset flags
             flagFirst = true;
             inputTextBox();
@@ -195,15 +197,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             locStart = new LatLng(latitude, longitude);
             markerStart = mMap.addMarker(new MarkerOptions().position(locStart).title("Start").icon(BitmapDescriptorFactory.fromResource(R.drawable.ba)));
             flagFirst = false;
-            mMap.moveCamera(CameraUpdateFactory.newLatLng(locStart));
-            mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
             markerEnd = mMap.addMarker(new MarkerOptions().position(locEnd).title("End").icon(BitmapDescriptorFactory.fromResource(R.drawable.bb)));
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(locEnd));
+            mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
         }
         else
         {
             markerEnd.setPosition(locEnd);
             mMap.moveCamera(CameraUpdateFactory.newLatLng(locEnd));
-            mMap.animateCamera(CameraUpdateFactory.zoomTo(14));
+            mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
         }
         if(flagRec)
         {
