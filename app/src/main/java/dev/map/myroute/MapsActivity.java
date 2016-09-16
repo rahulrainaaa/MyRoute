@@ -1,7 +1,7 @@
 package dev.map.myroute;
 
-import android.*;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
@@ -13,6 +13,8 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.widget.CompoundButton;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -21,22 +23,24 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener, LocationListener {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener, LocationListener, CompoundButton.OnCheckedChangeListener {
 
     //Map and Location objects
     private GoogleMap mMap;
     private LocationManager locationManager = null;
     private Polyline line = null;
+    private Switch recSwitch = null;
 
     //Map point markers
     private Marker markerStart = null;
@@ -49,6 +53,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     //flags
     private boolean flagFirst = true;
+    private boolean flagRec = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -57,6 +62,44 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setContentView(R.layout.activity_maps);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+        recSwitch = (Switch)findViewById(R.id.switch1);
+        recSwitch.setOnCheckedChangeListener(this);
+    }
+
+    @Override
+    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
+    {
+        if(markerStart != null)
+        {
+            markerStart.remove();
+        }
+        if(markerEnd != null)
+        {
+            markerEnd.remove();
+        }
+        flagRec = isChecked;
+        if(flagRec)
+        {
+            //reset flags and start recording
+            mMap.clear();
+            if(listPoints != null)
+            {
+                listPoints.clear();
+            }
+            else
+            {
+                listPoints = new ArrayList<>();
+            }
+            flagFirst = true;
+            Toast.makeText(MapsActivity.this, "Recording Start", Toast.LENGTH_SHORT).show();
+        }
+        else
+        {
+            //stop recording, save route and reset flags
+            flagFirst = true;
+            saveRouteData();
+            Toast.makeText(MapsActivity.this, "Recording Stop", Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
@@ -134,7 +177,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //Check if refreshed first time.
         if(flagFirst)
         {
-            listPoints.add(new LatLng(latitude, longitude));
             locStart = new LatLng(latitude, longitude);
             markerStart = mMap.addMarker(new MarkerOptions().position(locStart).title("Start").icon(BitmapDescriptorFactory.fromResource(R.drawable.ba)));
             mMap.moveCamera(CameraUpdateFactory.newLatLng(locStart));
@@ -144,10 +186,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         else
         {
-            listPoints.add(new LatLng(latitude, longitude));
             markerEnd.setPosition(locEnd);
             mMap.moveCamera(CameraUpdateFactory.newLatLng(locEnd));
-            mMap.animateCamera(CameraUpdateFactory.zoomTo(10));
+
+        }
+        if(flagRec)
+        {
+            listPoints.add(new LatLng(latitude, longitude));
             drawRoute();
         }
     }
@@ -172,6 +217,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return false;
     }
 
+    /**
+     * @method drawRoute
+     * @desc plots the routed path on google map from listPoints (ArrayList points LatLng).
+     */
     private void drawRoute()
     {
         //Get all points and plot the polyLine route.
@@ -191,13 +240,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         line = mMap.addPolyline(options);
 
-        //Focus on map bounds
-//        mMap.moveCamera(CameraUpdateFactory.newLatLng(list.get(0).getLatLgnBounds().getCenter()));
-//        LatLngBounds.Builder builder = new LatLngBounds().Builder();
-//        builder.include(locStart);
-//        builder.include(locEnd);
-//        LatLngBounds bounds = builder.build();
-//        mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 50));
     }
 
     /**
@@ -215,4 +257,45 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         i.addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
         startActivity(i);
     }
+
+    /**
+     * @method saveRouteData
+     * @desc Method converts listPoint (ArrayList) to JsonArray and then save the JSONArray String into sharedPreferences.
+     */
+    private void saveRouteData()
+    {
+        SharedPreferences.Editor se = getSharedPreferences("routeData", MODE_PRIVATE).edit();
+        try
+        {
+            JSONArray jarray = new JSONArray();
+            for(int i = 0; i < listPoints.size(); i++)
+            {
+                JSONObject json = new JSONObject();
+                json.put("lat", listPoints.get(i).latitude);
+                json.put("lng", listPoints.get(i).longitude);
+                jarray.put(json);
+            }
+
+            se.putString("data", jarray.toString());
+            se.commit();
+            Toast.makeText(MapsActivity.this, "Route Saved Successfully", Toast.LENGTH_SHORT).show();
+        }
+        catch (Exception e)
+        {
+            Toast.makeText(MapsActivity.this, "Exception: Cannot save the route offline", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        finally
+        {
+            listPoints.clear();
+            listPoints = null;
+            if(se != null)
+            {
+                se.clear();
+                se = null;
+            }
+        }
+    }
+
+
 }
