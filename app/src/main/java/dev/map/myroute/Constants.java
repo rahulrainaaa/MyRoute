@@ -9,9 +9,7 @@ import java.util.ArrayList;
 /**
  * Constants class
  */
-public class Constants
-{
-    public static String cacheName = "routelist";       //main cache stores cache names
-    public static String routeCache = "routecache";     //stores the path individually
-    public static ArrayList<LatLng> list = null;        //list to show route on map
+public class Constants {
+    public static String mainCache = "routelist";       //main cache stores cache names
+    public static String route = "routecache";     //stores the path individually
 }

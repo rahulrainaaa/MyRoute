@@ -31,7 +31,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".ListActivity" />
+        <activity android:name=".ListActivity"
+            android:label="Routes"/>
         <activity
             android:name=".MapViewActivity"
             android:label="@string/title_activity_map_view"></activity>

@@ -1,10 +1,12 @@
 package dev.map.myroute;
 
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.location.LocationManager;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.widget.Switch;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -17,6 +19,9 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -35,6 +40,8 @@ public class MapViewActivity extends FragmentActivity implements OnMapReadyCallb
     private LatLng locStart = null;
     private LatLng locEnd = null;
 
+    public ArrayList<LatLng> list = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -48,6 +55,7 @@ public class MapViewActivity extends FragmentActivity implements OnMapReadyCallb
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+        drawRoute();
     }
 
     /**
@@ -56,10 +64,36 @@ public class MapViewActivity extends FragmentActivity implements OnMapReadyCallb
      */
     private void drawRoute()
     {
-        //Get all points and plot the polyLine route.
 
+        SharedPreferences s = getSharedPreferences(Constants.route, MODE_PRIVATE);
+        String str = s.getString("data", "[]");
+        list = new ArrayList<LatLng>();
+        try
+        {
+            JSONArray jarray = new JSONArray(str);
+            for(int i = 0; i < jarray.length(); i++)
+            {
+                JSONObject json = jarray.getJSONObject(i);
+                double lat = json.getDouble("lat");
+                double lng = json.getDouble("lng");
+                list.add(new LatLng(lat, lng));
+            }
+        }
+        catch (Exception e)
+        {
+            Toast.makeText(MapViewActivity.this, "Exception: parsing error", Toast.LENGTH_SHORT).show();
+        }
+
+        if(list.size() < 1)
+        {
+            Toast.makeText(MapViewActivity.this, "Empty", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        //Get all points and plot the polyLine route.
         PolylineOptions options = new PolylineOptions().width(5).color(Color.BLUE).geodesic(true);
-        Iterator<LatLng> iterator = Constants.list.iterator();
+        Iterator<LatLng> iterator = list.iterator();
         while(iterator.hasNext())
         {
             LatLng data = iterator.next();
@@ -73,10 +107,10 @@ public class MapViewActivity extends FragmentActivity implements OnMapReadyCallb
         }
         line = mMap.addPolyline(options);
 
-        double startLat = Constants.list.get(0).latitude;
-        double startLng = Constants.list.get(0).longitude;
-        double endLat = Constants.list.get(Constants.list.size() - 1).latitude;
-        double endLng = Constants.list.get(Constants.list.size() - 1).longitude;
+        double startLat = list.get(0).latitude;
+        double startLng = list.get(0).longitude;
+        double endLat = list.get(list.size() - 1).latitude;
+        double endLng = list.get(list.size() - 1).longitude;
 
         locStart = new LatLng(startLat, startLng);
         markerStart = mMap.addMarker(new MarkerOptions().position(locStart).title("Start").icon(BitmapDescriptorFactory.fromResource(R.drawable.ba)));

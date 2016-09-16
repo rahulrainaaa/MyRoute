@@ -72,6 +72,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onClick(View v) {
 
+                if(!flagRec)
+                {
+                    startActivity(new Intent(MapsActivity.this, ListActivity.class));
+                    finish();
+                }
+
             }
         });
     }
@@ -290,12 +296,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             se.commit();
             Toast.makeText(MapsActivity.this, "Route Saved Successfully", Toast.LENGTH_SHORT).show();
 
-            //Now save the route name in cache.
-            SharedPreferences s = getSharedPreferences(Constants.cacheName, MODE_PRIVATE);
+            //Now save the route name in main cache.
+            SharedPreferences s = getSharedPreferences(Constants.mainCache, MODE_PRIVATE);
             jarray = new JSONArray(s.getString("data", "[]").toString());
             s = null;
             jarray.put(str.trim());
-            se = getSharedPreferences(Constants.cacheName, MODE_PRIVATE).edit();
+            se = getSharedPreferences(Constants.mainCache, MODE_PRIVATE).edit();
             se.putString("data", jarray.toString());
             se.commit();
             se = null;
@@ -329,7 +335,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         final EditText input = new EditText(this);
 
         alertDialogBuilder.setView(input);
-        alertDialogBuilder.setTitle("Search Place");
+        alertDialogBuilder.setTitle("Route Name");
 
         alertDialogBuilder.setCancelable(false)
                 .setPositiveButton("OK", new DialogInterface.OnClickListener() {
