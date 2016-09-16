@@ -1,5 +1,6 @@
 package dev.map.myroute;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -13,7 +14,10 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
+import android.view.View;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.Toast;
 
@@ -64,6 +68,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mapFragment.getMapAsync(this);
         recSwitch = (Switch)findViewById(R.id.switch1);
         recSwitch.setOnCheckedChangeListener(this);
+        findViewById(R.id.fab).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+            }
+        });
     }
 
     @Override
@@ -91,14 +101,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 listPoints = new ArrayList<>();
             }
             flagFirst = true;
-            Toast.makeText(MapsActivity.this, "Recording Start", Toast.LENGTH_SHORT).show();
         }
         else
         {
             //stop recording, save route and reset flags
             flagFirst = true;
-            saveRouteData();
-            Toast.makeText(MapsActivity.this, "Recording Stop", Toast.LENGTH_SHORT).show();
+            inputTextBox();
+
         }
     }
 
@@ -179,16 +188,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         {
             locStart = new LatLng(latitude, longitude);
             markerStart = mMap.addMarker(new MarkerOptions().position(locStart).title("Start").icon(BitmapDescriptorFactory.fromResource(R.drawable.ba)));
+            flagFirst = false;
             mMap.moveCamera(CameraUpdateFactory.newLatLng(locStart));
             mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
-            flagFirst = false;
             markerEnd = mMap.addMarker(new MarkerOptions().position(locEnd).title("End").icon(BitmapDescriptorFactory.fromResource(R.drawable.bb)));
         }
         else
         {
             markerEnd.setPosition(locEnd);
             mMap.moveCamera(CameraUpdateFactory.newLatLng(locEnd));
-
+            mMap.animateCamera(CameraUpdateFactory.zoomTo(14));
         }
         if(flagRec)
         {
@@ -262,11 +271,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      * @method saveRouteData
      * @desc Method converts listPoint (ArrayList) to JsonArray and then save the JSONArray String into sharedPreferences.
      */
-    private void saveRouteData()
+    private void saveRouteData(String str)
     {
-        SharedPreferences.Editor se = getSharedPreferences("routeData", MODE_PRIVATE).edit();
+        SharedPreferences.Editor se = getSharedPreferences(str.trim(), MODE_PRIVATE).edit();
         try
         {
+            //First save the route
             JSONArray jarray = new JSONArray();
             for(int i = 0; i < listPoints.size(); i++)
             {
@@ -279,6 +289,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             se.putString("data", jarray.toString());
             se.commit();
             Toast.makeText(MapsActivity.this, "Route Saved Successfully", Toast.LENGTH_SHORT).show();
+
+            //Now save the route name in cache.
+            SharedPreferences s = getSharedPreferences(Constants.cacheName, MODE_PRIVATE);
+            jarray = new JSONArray(s.getString("data", "[]").toString());
+            s = null;
+            jarray.put(str.trim());
+            se = getSharedPreferences(Constants.cacheName, MODE_PRIVATE).edit();
+            se.putString("data", jarray.toString());
+            se.commit();
+            se = null;
+            startActivity(new Intent(MapsActivity.this, ListActivity.class));
+            finish();
         }
         catch (Exception e)
         {
@@ -297,5 +319,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    /**
+     * @method inputTextBox
+     * @desc Prompts for route name on map.
+     */
+    public void inputTextBox()
+    {
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+        final EditText input = new EditText(this);
+
+        alertDialogBuilder.setView(input);
+        alertDialogBuilder.setTitle("Search Place");
+
+        alertDialogBuilder.setCancelable(false)
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+
+                        //Call method for handling search for address queried.
+                        saveRouteData(input.getText().toString().trim());
+
+                    }
+                })
+                .setNegativeButton("Cancel",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
+                                dialog.cancel();
+                            }
+                        });
+        AlertDialog alertD = alertDialogBuilder.create();
+        alertD.show();
+
+    }
 
 }
