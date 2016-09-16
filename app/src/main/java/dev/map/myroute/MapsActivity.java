@@ -10,6 +10,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.provider.Settings;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
@@ -76,6 +77,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 {
                     startActivity(new Intent(MapsActivity.this, ListActivity.class));
                     finish();
+                }
+                else
+                {
+                    Snackbar.make(v, "Recording in progress", Snackbar.LENGTH_SHORT).show();
                 }
 
             }
@@ -198,7 +203,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             markerStart = mMap.addMarker(new MarkerOptions().position(locStart).title("Start").icon(BitmapDescriptorFactory.fromResource(R.drawable.ba)));
             flagFirst = false;
             markerEnd = mMap.addMarker(new MarkerOptions().position(locEnd).title("End").icon(BitmapDescriptorFactory.fromResource(R.drawable.bb)));
-            mMap.moveCamera(CameraUpdateFactory.newLatLng(locEnd));
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(locStart));
             mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
         }
         else
